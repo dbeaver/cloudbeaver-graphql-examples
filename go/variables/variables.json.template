@@ -1,0 +1,7 @@
+{
+  "server": {
+    "serverURL": "",
+    "serviceURI": "api"
+  },
+  "apiToken": ""
+}
