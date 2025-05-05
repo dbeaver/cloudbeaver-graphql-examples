@@ -5,7 +5,9 @@ import (
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
 )
 
-const authQuery = `
+// Queries and mutations
+const (
+	authQuery = `
 query authLogin($token: String!) {
     authLogin(provider: "token", credentials: { token: $token }) {
         userTokens {
@@ -15,6 +17,21 @@ query authLogin($token: String!) {
     }
 }
 `
+
+	createTeamQuery = `
+query createTeam($teamId: ID!) {
+  createTeam(teamId: $teamId) {
+    teamId
+  }
+}
+`
+
+	deleteTeamQuery = `
+query deleteTeam($teamId: ID!, $force: Boolean) {
+  deleteTeam(teamId: $teamId, force: $force)
+}
+`
+)
 
 type Client struct {
 	GraphQLClient graphql.Client
@@ -34,5 +51,22 @@ func (client Client) Auth(token string) ([]byte, error) {
 		"token": token,
 	}
 	request := graphql.Request{Query: authQuery, Variables: variables}
+	return client.sendRequest(request)
+}
+
+func (client Client) CreateTeam(teamId string) ([]byte, error) {
+	variables := map[string]any{
+		"teamId": teamId,
+	}
+	request := graphql.Request{Query: createTeamQuery, Variables: variables}
+	return client.sendRequest(request)
+}
+
+func (client Client) DeleteTeam(teamId string, force bool) ([]byte, error) {
+	variables := map[string]any{
+		"teamId": teamId,
+		"force":  force,
+	}
+	request := graphql.Request{Query: deleteTeamQuery, Variables: variables}
 	return client.sendRequest(request)
 }
