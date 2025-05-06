@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/api"
@@ -24,35 +26,35 @@ func main0() error {
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
-	httpClient, err := graphql.StandardHttpClient()
+	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
-		return err
+		return lib.WrapError("unable to create a cookie jar", err)
 	}
-	graphQLClient := graphql.Client{HttpClient: httpClient}
+	graphQLClient := graphql.Client{HttpClient: &http.Client{Jar: cookieJar}}
 	apiClient := api.Client{GraphQLClient: graphQLClient, Endpoint: variables.GraphqlEndpoint()}
 
 	// Auth
-	response, err := apiClient.Auth(variables.Token)
+	data, err := apiClient.Auth(variables.Token)
 	variables.PurgeToken()
 	if err != nil {
 		return lib.WrapError("unable to authenticate", err)
 	}
-	fmt.Println(string(response))
+	fmt.Println(string(data))
 
 	// Create a team
 	teamId := "exampleTeamId"
-	response, err = apiClient.CreateTeam(teamId)
+	data, err = apiClient.CreateTeam(teamId)
 	if err != nil {
 		return lib.WrapError("unable to create a team", err)
 	}
-	fmt.Println(string(response))
+	fmt.Println(string(data))
 
 	// Delete a team
-	response, err = apiClient.DeleteTeam(teamId, false)
+	data, err = apiClient.DeleteTeam(teamId, false)
 	if err != nil {
 		return lib.WrapError("unable to delete a team", err)
 	}
-	fmt.Println(string(response))
+	fmt.Println(string(data))
 
 	return nil
 }
