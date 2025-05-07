@@ -12,6 +12,12 @@ import (
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
 )
 
+const (
+	objectPrefix = "cloudbeaver-graqhql-examples-go-"
+	teamId       = objectPrefix + "team"
+	projectName  = objectPrefix + "project"
+)
+
 func main() {
 	if err := main0(); err != nil {
 		slog.Error(err.Error())
@@ -25,12 +31,7 @@ func main0() error {
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
-	cookieJar, err := cookiejar.New(nil)
-	if err != nil {
-		return lib.WrapError("unable to create a cookie jar", err)
-	}
-	graphQLClient := graphql.Client{HttpClient: &http.Client{Jar: cookieJar}}
-	apiClient := api.Client{GraphQLClient: graphQLClient, Endpoint: env.GraphqlEndpoint()}
+	apiClient := initClient(env.GraphqlEndpoint())
 
 	// Auth
 	err = apiClient.Auth(env.Token)
@@ -39,18 +40,41 @@ func main0() error {
 		return err
 	}
 
-	// Create a team
-	teamId := "exampleTeamId"
+	// Creation / deletion of a team
 	err = apiClient.CreateTeam(teamId)
 	if err != nil {
 		return err
 	}
+	defer cleanup("delete team "+teamId, func() error {
+		return apiClient.DeleteTeam(teamId, true)
+	})
 
-	// Delete a team
-	err = apiClient.DeleteTeam(teamId, true)
+	// Creation of a project
+	projectId, err := apiClient.CreateProject(projectName)
 	if err != nil {
 		return err
 	}
+	defer cleanup("delete project "+projectId, func() error {
+		return apiClient.DeleteProject(projectId)
+	})
 
 	return nil
+}
+
+func initClient(endpoint string) api.Client {
+	cookieJar, err := cookiejar.New(nil)
+	if err != nil {
+		// Invariant: the method that creates cookie jar with no options never returns non-nil err
+		panic("encountered error while creating a cookie jar! " + err.Error())
+	}
+	graphQLClient := graphql.Client{HttpClient: &http.Client{Jar: cookieJar}}
+	return api.Client{GraphQLClient: graphQLClient, Endpoint: endpoint}
+}
+
+func cleanup(callDescription string, apiCall func() error) {
+	err := apiCall()
+	if err != nil {
+		slog.Warn("unable to " + callDescription)
+		slog.Warn(err.Error())
+	}
 }
