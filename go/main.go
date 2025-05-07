@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
@@ -34,27 +33,24 @@ func main0() error {
 	apiClient := api.Client{GraphQLClient: graphQLClient, Endpoint: variables.GraphqlEndpoint()}
 
 	// Auth
-	data, err := apiClient.Auth(variables.Token)
+	err = apiClient.Auth(variables.Token)
 	variables.PurgeToken()
 	if err != nil {
-		return lib.WrapError("unable to authenticate", err)
+		return err
 	}
-	fmt.Println(string(data))
 
 	// Create a team
 	teamId := "exampleTeamId"
-	data, err = apiClient.CreateTeam(teamId)
+	err = apiClient.CreateTeam(teamId)
 	if err != nil {
-		return lib.WrapError("unable to create a team", err)
+		return err
 	}
-	fmt.Println(string(data))
 
 	// Delete a team
-	data, err = apiClient.DeleteTeam(teamId, false)
+	err = apiClient.DeleteTeam(teamId, true)
 	if err != nil {
-		return lib.WrapError("unable to delete a team", err)
+		return err
 	}
-	fmt.Println(string(data))
 
 	return nil
 }
