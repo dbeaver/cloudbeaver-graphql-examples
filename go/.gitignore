@@ -1,4 +1,4 @@
-variables.json
+env.json
 # binary
 go
 

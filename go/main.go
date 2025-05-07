@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/api"
+	"github.com/dbeaver/cloudbeaver-graphql-examples/go/env"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/graphql"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
-	"github.com/dbeaver/cloudbeaver-graphql-examples/go/variables"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 
 func main0() error {
 	// Instantiate a client
-	variables, err := variables.Read()
+	env, err := env.Read()
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
@@ -30,11 +30,11 @@ func main0() error {
 		return lib.WrapError("unable to create a cookie jar", err)
 	}
 	graphQLClient := graphql.Client{HttpClient: &http.Client{Jar: cookieJar}}
-	apiClient := api.Client{GraphQLClient: graphQLClient, Endpoint: variables.GraphqlEndpoint()}
+	apiClient := api.Client{GraphQLClient: graphQLClient, Endpoint: env.GraphqlEndpoint()}
 
 	// Auth
-	err = apiClient.Auth(variables.Token)
-	variables.PurgeToken()
+	err = apiClient.Auth(env.Token)
+	env.PurgeToken()
 	if err != nil {
 		return err
 	}
