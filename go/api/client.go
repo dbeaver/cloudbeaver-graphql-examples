@@ -1,8 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/graphql"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
@@ -41,36 +43,42 @@ type Client struct {
 	Endpoint      string
 }
 
-func (client Client) sendRequest(query string, variables map[string]any) (json.RawMessage, error) {
+func (client Client) sendRequest(operationName, query string, variables map[string]any) error {
 	request := graphql.Request{Query: query, Variables: variables}
+	slog.Info("--> GraphQL call [" + operationName + "]")
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		slog.Info(fmt.Sprintf("<-- Call [%s] finished (%s)", operationName, duration))
+	}()
 	response, err := client.GraphQLClient.Execute(client.Endpoint, request)
 	if err != nil {
-		return json.RawMessage{}, lib.WrapError("error while sending an api request", err)
+		return lib.WrapError("error while sending an api request", err)
 	}
 	if response.Errors != nil {
-		err = errors.New("error recieved when executing an API call: \n" + string(response.Errors))
+		return errors.New("error recieved when executing an API call: \n" + string(response.Errors))
 	}
-	return response.Data, err
+	return nil
 }
 
-func (client Client) Auth(token string) (json.RawMessage, error) {
+func (client Client) Auth(token string) error {
 	variables := map[string]any{
 		"token": token,
 	}
-	return client.sendRequest(authQuery, variables)
+	return client.sendRequest("auth", authQuery, variables)
 }
 
-func (client Client) CreateTeam(teamId string) (json.RawMessage, error) {
+func (client Client) CreateTeam(teamId string) error {
 	variables := map[string]any{
 		"teamId": teamId,
 	}
-	return client.sendRequest(createTeamQuery, variables)
+	return client.sendRequest(fmt.Sprintf("create team '%s'", teamId), createTeamQuery, variables)
 }
 
-func (client Client) DeleteTeam(teamId string, force bool) (json.RawMessage, error) {
+func (client Client) DeleteTeam(teamId string, force bool) error {
 	variables := map[string]any{
 		"teamId": teamId,
 		"force":  force,
 	}
-	return client.sendRequest(deleteTeamQuery, variables)
+	return client.sendRequest(fmt.Sprintf("delete team '%s'", teamId), deleteTeamQuery, variables)
 }
