@@ -141,15 +141,11 @@ func (client Client) DeleteProject(projectId string) error {
 	variables := map[string]any{
 		"projectId": projectId,
 	}
-	rawData, err := client.sendRequest(
+	return client.sendRequestDiscardingData(
 		fmt.Sprintf("delete project with id '%s'", projectId),
 		deleteProjectMutation,
-		variables)
-	if err != nil {
-		return err
-	}
-	slog.Debug(string(rawData))
-	return nil
+		variables,
+	)
 }
 
 // subjectIds: Ids of teams or individual users
