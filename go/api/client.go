@@ -51,6 +51,15 @@ mutation RmDeleteProject($projectId: ID!) {
     rmDeleteProject(projectId: $projectId)
 }
 `
+	addProjectPermissionsMutation = `
+mutation addProjectsPermissions($projectIds: [ID!]!, $subjectIds: [ID!]!, $permissions: [String!]!) {
+    rmAddProjectsPermissions(
+        projectIds: $projectIds
+        subjectIds: $subjectIds
+        permissions: $permissions
+    )
+}
+`
 )
 
 type Client struct {
@@ -141,4 +150,21 @@ func (client Client) DeleteProject(projectId string) error {
 	}
 	slog.Debug(string(rawData))
 	return nil
+}
+
+// subjectIds: Ids of teams or individual users
+func (client Client) AddProjectAccess(projectId string, subjectIds ...string) error {
+	variables := map[string]any{
+		"projectIds": [1]string{projectId},
+		"subjectIds": subjectIds,
+		"permissions": [2]string{
+			"project-datasource-view",
+			"project-resource-view",
+		},
+	}
+	return client.sendRequestDiscardingData(
+		fmt.Sprintf("grant subjects %s access to project with id '%s'", subjectIds, projectId),
+		addProjectPermissionsMutation,
+		variables,
+	)
 }

@@ -58,6 +58,12 @@ func main0() error {
 		return apiClient.DeleteProject(projectId)
 	})
 
+	// Grant access
+	err = apiClient.AddProjectAccess(projectId, teamId)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
