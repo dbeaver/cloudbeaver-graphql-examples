@@ -1,0 +1,5 @@
+query createTeam($teamId: ID!) {
+    createTeam(teamId: $teamId) {
+        teamId
+    }
+}

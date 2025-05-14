@@ -30,10 +30,25 @@ execute_cb_gql() {
     execute_gql "$gql_endpoint" "$1" "$2"
 }
 
+read_operation() {
+    sed 's/"/\\"/g' < "$script_dir"/../operations/"$1".gql
+}
+
 auth() {
     # shellcheck disable=SC2154
     # api_token is set in the .env file
     execute_cb_gql "$(sed 's/"/\\"/g' < "$script_dir"/../operations/auth.gql)" "\"token\": \"$api_token\""
 }
 
+create_team() {
+    execute_cb_gql "$(read_operation create_team)" "\"teamId\": \"$1\""
+}
+
+delete_team() {
+    execute_cb_gql "$(read_operation delete_team)" "\"teamId\": \"$1\", \"force\": true"
+}
+
 auth
+team_id="cloudbeaver-graphql-examples_curl-team"
+create_team "$team_id"
+delete_team "$team_id"
