@@ -27,14 +27,14 @@ func main() {
 
 func main0() error {
 	// Instantiate a client
-	env, err := env.Read()
+	env, err := readEnv()
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
 	apiClient := initClient(env.GraphqlEndpoint())
 
 	// Auth
-	err = apiClient.Auth(env.Token)
+	err = apiClient.Auth(env.APIToken)
 	env.PurgeToken()
 	if err != nil {
 		return err
@@ -65,6 +65,16 @@ func main0() error {
 	}
 
 	return nil
+}
+
+func readEnv() (env.Env, error) {
+	var envFilePath string
+	if len(os.Args) > 1 {
+		envFilePath = os.Args[1]
+	} else {
+		envFilePath = "../.env"
+	}
+	return env.Read(envFilePath)
 }
 
 func initClient(endpoint string) api.Client {

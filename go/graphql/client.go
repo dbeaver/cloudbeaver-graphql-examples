@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
@@ -23,7 +22,7 @@ func (client Client) Execute(endpoint string, request Request) (Response, error)
 	if err != nil {
 		return Response{}, lib.WrapError("unable to execute POST request", err)
 	}
-	defer closeOrWarn(httpResponse.Body)
+	defer lib.CloseOrWarn(httpResponse.Body)
 	rawResponseBody, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return Response{}, lib.WrapError("unable to read GraphQL response body", err)
@@ -33,10 +32,4 @@ func (client Client) Execute(endpoint string, request Request) (Response, error)
 		err = lib.WrapError("error while unmarshalling GraphQL response body into json", err)
 	}
 	return response, err
-}
-
-func closeOrWarn(closer io.Closer) {
-	if err := closer.Close(); err != nil {
-		slog.Warn("error while closing a Closer: " + err.Error())
-	}
 }
