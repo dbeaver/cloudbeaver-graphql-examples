@@ -19,9 +19,9 @@ python3 -m venv .venv
 ```sh
 pip install -r requirements.txt
 ```
-5. Create the `.env` file from the `.env.template`
+5. Create the `../.env` file from the `../.env.template` (see the repository root for file `.env.template`)
 ```sh
-cp .env.template .env
+cp ../.env.template ../.env
 ```
 6. Fill the environment variables in the `.env` file.
 7. Execute the script with
