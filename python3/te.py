@@ -1,12 +1,16 @@
 import os
+
+from dotenv import load_dotenv
 from gql import gql, Client
 from gql.transport.aiohttp import AIOHTTPTransport
-from dotenv import load_dotenv
 
 # Load important variables from the .env file. Among them there is an API token.
 # Consider using a more robust and secure approach when using this in production!
 # Also, see `get_api_token` function
-load_dotenv()
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+dotenv_path = os.path.join(parent_dir, ".env")
+load_dotenv(dotenv_path=dotenv_path)
 
 def non_none_env(var_name: str) -> str:
     value = os.getenv(var_name)

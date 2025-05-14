@@ -21,7 +21,7 @@ execute_gql() {
     "$1"
 }
 
-. "$script_dir"/../python3/.env
+. "$script_dir"/../.env
 # shellcheck disable=SC2154
 # These variables are set in the .env file
 gql_endpoint="$server_url/$service_uri/gql"
