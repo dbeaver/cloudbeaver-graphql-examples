@@ -1,41 +1,56 @@
 package env
 
 import (
-	"encoding/json"
+	"bufio"
+	"fmt"
+	"log/slog"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
 )
 
 type Env struct {
-	ServerInfo ServerInfo `json:"server"`
-	Token      string     `json:"apiToken"`
+	APIToken   string
+	serverURL  string
+	serviceURI string
 }
 
-type ServerInfo struct {
-	ServerURL  string `json:"serverURL"`
-	ServiceURI string `json:"serviceURI"`
-}
-
-func Read() (Env, error) {
+func Read(path string) (Env, error) {
 	env := Env{}
-	bytes, err := os.ReadFile("env/env.json")
+	file, err := os.Open(path)
 	if err != nil {
-		return env, err
+		return env, lib.WrapError("error while opening the env file", err)
 	}
-	err = json.Unmarshal(bytes, &env)
-	if err != nil {
-		err = lib.WrapError("error while unmarshalling the env file", err)
+	defer lib.CloseOrWarn(file)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		before, after, found := strings.Cut(scanner.Text(), "=")
+		if !found {
+			continue
+		}
+		before = strings.TrimSpace(before)
+		after = strings.TrimSpace(after)
+		switch before {
+		case "api_token":
+			env.APIToken = after
+		case "server_url":
+			env.serverURL = after
+		case "service_uri":
+			env.serviceURI = after
+		default:
+			slog.Warn(fmt.Sprintf("unknown env variable: %s", before))
+		}
 	}
 	return env, err
 }
 
 func (env *Env) GraphqlEndpoint() string {
-	return env.ServerInfo.ServerURL + "/" + env.ServerInfo.ServiceURI + "/gql"
+	return env.serverURL + "/" + env.serviceURI + "/gql"
 }
 
 func (env *Env) PurgeToken() {
-	env.Token = ""
+	env.APIToken = ""
 	runtime.GC()
 }
