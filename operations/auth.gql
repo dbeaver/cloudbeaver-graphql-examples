@@ -1,0 +1,8 @@
+query authLogin($token: String!) {
+    authLogin(provider: "token", credentials: { token: $token }) {
+        userTokens {
+            userId
+        }
+        authStatus
+    }
+}
