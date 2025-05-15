@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import time
 from typing import Optional, Dict, Any
 
 import aiohttp
@@ -22,14 +23,14 @@ async def main():
     service_uri = non_none_env('service_uri')
     api_client = APIClient(f"{server_url}/{service_uri}/gql")
 
-    await api_client.execute_query("auth", {
+    await api_client.execute_query(operation_name="auth", variables={
         "token": non_none_env('api_token'),
     })
     team_id = "cloudbeaver-graphql-examples_python3-team"
-    await api_client.execute_query("create_team", {
+    await api_client.execute_query(operation_name="create_team", variables={
         "teamId": team_id,
     })
-    await api_client.execute_query("delete_team", {
+    await api_client.execute_query(operation_name="delete_team", variables={
         "teamId": team_id,
         "force": True,
     })
@@ -47,9 +48,19 @@ class APIClient:
         transport = AIOHTTPTransport(url=endpoint, ssl=True, client_session_args={'cookie_jar': aiohttp.CookieJar()})
         self._client = Client(transport=transport, fetch_schema_from_transport=True)
 
-    async def execute_query(self, operation_name: str, variables: Optional[Dict[str, Any]] = None):
+    async def execute_query(
+        self,
+        operation_name: str,
+        operation_description: Optional[str] = None,
+        variables: Optional[Dict[str, Any]] = None
+    ) -> None:
+        if operation_description is None:
+            operation_description = operation_name
         with open("../operations/" + operation_name + ".gql", encoding="utf-8") as file:
-            result = await self._client.execute_async(document=gql(file.read()), variable_values=variables)
-            print(result)
+            print("--> GraphQL call [" + operation_description + "]")
+            start = time.perf_counter()
+            await self._client.execute_async(document=gql(file.read()), variable_values=variables)
+            end = time.perf_counter()
+            print("<-- Call [{}] finished ({})".format(operation_description, f"{end - start:.3f} sec"))
 
 asyncio.run(main())
