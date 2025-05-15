@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -29,11 +30,14 @@ func main() {
 
 func main0() error {
 	// Instantiate a client
-	env, err := readEnv()
+	envFlag := flag.String("env", "../.env", "Path to the .env file")
+	operationsFlag := flag.String("operations", "../operations", "Path to the folder with GraphQL operations")
+	flag.Parse()
+	env, err := readEnv(*envFlag)
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
-	apiClient := initClient(env.serverURL + "/" + env.serviceURI + "/gql")
+	apiClient := initClient(env.serverURL+"/"+env.serviceURI+"/gql", *operationsFlag)
 
 	// Auth
 	err = apiClient.Auth(env.apiToken)
@@ -74,13 +78,7 @@ type env struct {
 	serviceURI string
 }
 
-func readEnv() (env, error) {
-	var envFilePath string
-	if len(os.Args) > 1 {
-		envFilePath = os.Args[1]
-	} else {
-		envFilePath = "../.env"
-	}
+func readEnv(envFilePath string) (env, error) {
 	env := env{}
 	file, err := os.Open(envFilePath)
 	if err != nil {
@@ -109,14 +107,14 @@ func readEnv() (env, error) {
 	return env, err
 }
 
-func initClient(endpoint string) api.Client {
+func initClient(endpoint string, operationsPath string) api.Client {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
 		// Invariant: the method that creates cookie jar with no options never returns non-nil err
 		panic("encountered error while creating a cookie jar! " + err.Error())
 	}
 	graphQLClient := graphql.Client{HttpClient: &http.Client{Jar: cookieJar}}
-	return api.Client{GraphQLClient: graphQLClient, Endpoint: endpoint}
+	return api.Client{GraphQLClient: graphQLClient, Endpoint: endpoint, OperationsPath: operationsPath}
 }
 
 func cleanup(callDescription string, apiCall func() error) {
