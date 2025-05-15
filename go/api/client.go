@@ -5,66 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/graphql"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
 )
 
-// Queries and mutations
-const (
-	authQuery = `
-query authLogin($token: String!) {
-    authLogin(provider: "token", credentials: { token: $token }) {
-        userTokens {
-            userId
-        }
-        authStatus
-    }
-}
-`
-
-	createTeamQuery = `
-query createTeam($teamId: ID!) {
-  createTeam(teamId: $teamId) {
-    teamId
-  }
-}
-`
-
-	deleteTeamQuery = `
-query deleteTeam($teamId: ID!, $force: Boolean) {
-  deleteTeam(teamId: $teamId, force: $force)
-}
-`
-
-	createProjectMutation = `
-mutation RmCreateProject($projectName: String!) {
-    rmCreateProject(projectName: $projectName) {
-        id
-    }
-}
-`
-
-	deleteProjectMutation = `
-mutation RmDeleteProject($projectId: ID!) {
-    rmDeleteProject(projectId: $projectId)
-}
-`
-	addProjectPermissionsMutation = `
-mutation addProjectsPermissions($projectIds: [ID!]!, $subjectIds: [ID!]!, $permissions: [String!]!) {
-    rmAddProjectsPermissions(
-        projectIds: $projectIds
-        subjectIds: $subjectIds
-        permissions: $permissions
-    )
-}
-`
-)
-
 type Client struct {
-	GraphQLClient graphql.Client
-	Endpoint      string
+	GraphQLClient  graphql.Client
+	Endpoint       string
+	OperationsPath string
 }
 
 func (client Client) sendRequest(operationName, query string, variables graphql.Object) (json.RawMessage, error) {
@@ -90,42 +41,70 @@ func (client Client) sendRequestDiscardingData(operationName, query string, vari
 	return err
 }
 
+func (client Client) readOperationText(operationName string) (string, error) {
+	path := client.OperationsPath + "/" + operationName + ".gql"
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", lib.WrapError(fmt.Sprintf("unable to read operation file %s", path), err)
+	}
+	return string(bytes), nil
+}
+
 func (client Client) Auth(token string) error {
+	query, err := client.readOperationText("auth")
+	if err != nil {
+		return err
+	}
 	variables := map[string]any{
 		"token": token,
 	}
-	return client.sendRequestDiscardingData("auth", authQuery, variables)
+	return client.sendRequestDiscardingData("auth", query, variables)
 }
 
 func (client Client) CreateTeam(teamId string) error {
+	query, err := client.readOperationText("create_team")
+	if err != nil {
+		return err
+	}
 	variables := map[string]any{
 		"teamId": teamId,
 	}
 	return client.sendRequestDiscardingData(
 		fmt.Sprintf("create team '%s'", teamId),
-		createTeamQuery,
-		variables)
+		query,
+		variables,
+	)
 }
 
 func (client Client) DeleteTeam(teamId string, force bool) error {
+	query, err := client.readOperationText("delete_team")
+	if err != nil {
+		return err
+	}
 	variables := map[string]any{
 		"teamId": teamId,
 		"force":  force,
 	}
 	return client.sendRequestDiscardingData(
 		fmt.Sprintf("delete team '%s'", teamId),
-		deleteTeamQuery,
-		variables)
+		query,
+		variables,
+	)
 }
 
 func (client Client) CreateProject(projectName string) (id string, err error) {
+	query, err := client.readOperationText("create_project")
+	if err != nil {
+		return "", err
+	}
 	variables := map[string]any{
 		"projectName": projectName,
 	}
 	rawData, err := client.sendRequest(
 		fmt.Sprintf("create project with name '%s'", projectName),
-		createProjectMutation,
-		variables)
+		query,
+		variables,
+	)
 	if err != nil {
 		return id, err
 	}
@@ -138,18 +117,26 @@ func (client Client) CreateProject(projectName string) (id string, err error) {
 }
 
 func (client Client) DeleteProject(projectId string) error {
+	query, err := client.readOperationText("delete_project")
+	if err != nil {
+		return err
+	}
 	variables := map[string]any{
 		"projectId": projectId,
 	}
 	return client.sendRequestDiscardingData(
 		fmt.Sprintf("delete project with id '%s'", projectId),
-		deleteProjectMutation,
+		query,
 		variables,
 	)
 }
 
 // subjectIds: Ids of teams or individual users
 func (client Client) AddProjectAccess(projectId string, subjectIds ...string) error {
+	query, err := client.readOperationText("add_project_permissions")
+	if err != nil {
+		return err
+	}
 	variables := map[string]any{
 		"projectIds": [1]string{projectId},
 		"subjectIds": subjectIds,
@@ -160,7 +147,7 @@ func (client Client) AddProjectAccess(projectId string, subjectIds ...string) er
 	}
 	return client.sendRequestDiscardingData(
 		fmt.Sprintf("grant subjects %s access to project with id '%s'", subjectIds, projectId),
-		addProjectPermissionsMutation,
+		query,
 		variables,
 	)
 }

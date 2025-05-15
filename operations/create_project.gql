@@ -1,0 +1,5 @@
+mutation RmCreateProject($projectName: String!) {
+    rmCreateProject(projectName: $projectName) {
+        id
+    }
+}
