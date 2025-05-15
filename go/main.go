@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"strings"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/api"
-	"github.com/dbeaver/cloudbeaver-graphql-examples/go/env"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/graphql"
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/lib"
 )
@@ -31,11 +33,10 @@ func main0() error {
 	if err != nil {
 		return lib.WrapError("error while reading variables", err)
 	}
-	apiClient := initClient(env.GraphqlEndpoint())
+	apiClient := initClient(env.serverURL + "/" + env.serviceURI + "/gql")
 
 	// Auth
-	err = apiClient.Auth(env.APIToken)
-	env.PurgeToken()
+	err = apiClient.Auth(env.apiToken)
 	if err != nil {
 		return err
 	}
@@ -67,14 +68,45 @@ func main0() error {
 	return nil
 }
 
-func readEnv() (env.Env, error) {
+type env struct {
+	apiToken   string
+	serverURL  string
+	serviceURI string
+}
+
+func readEnv() (env, error) {
 	var envFilePath string
 	if len(os.Args) > 1 {
 		envFilePath = os.Args[1]
 	} else {
 		envFilePath = "../.env"
 	}
-	return env.Read(envFilePath)
+	env := env{}
+	file, err := os.Open(envFilePath)
+	if err != nil {
+		return env, lib.WrapError("error while opening the env file", err)
+	}
+	defer lib.CloseOrWarn(file)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		before, after, found := strings.Cut(scanner.Text(), "=")
+		if !found {
+			continue
+		}
+		before = strings.TrimSpace(before)
+		after = strings.TrimSpace(after)
+		switch before {
+		case "api_token":
+			env.apiToken = after
+		case "server_url":
+			env.serverURL = after
+		case "service_uri":
+			env.serviceURI = after
+		default:
+			slog.Warn(fmt.Sprintf("unknown env variable: %s", before))
+		}
+	}
+	return env, err
 }
 
 func initClient(endpoint string) api.Client {
