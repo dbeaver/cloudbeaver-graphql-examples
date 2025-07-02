@@ -1,0 +1,20 @@
+mutation importProductLicense($licenseText: String) {
+	license: importProductLicense(licenseText: $licenseText) {
+		licenseType
+		ownerCompany
+		ownerName
+		ownerEmail
+		yearsNumber
+		subscription
+		multiInstance
+		unlimitedServers
+		licenseIssueTime
+		licenseStartTime
+		licenseEndTime
+		serversNumber
+		licenseRoles {
+			role
+			usersNumber
+		}
+	}
+}
