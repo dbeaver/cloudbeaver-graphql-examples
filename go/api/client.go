@@ -1,11 +1,14 @@
 package api
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dbeaver/cloudbeaver-graphql-examples/go/graphql"
@@ -14,6 +17,7 @@ import (
 
 type Client struct {
 	GraphQLClient  graphql.Client
+	ServerURL      string
 	Endpoint       string
 	OperationsPath string
 }
@@ -59,6 +63,23 @@ func (client Client) Auth(token string) error {
 		"token": token,
 	}
 	return client.sendRequestDiscardingData("auth", query, variables)
+}
+
+func (client Client) LocalAuth(username, password string) error {
+	query, err := client.readOperationText("generic_auth")
+	if err != nil {
+		return err
+	}
+	rawMD5Sum := md5.Sum([]byte(password))
+	passwordHash := strings.ToUpper(hex.EncodeToString(rawMD5Sum[:]))
+	variables := map[string]any{
+		"provider": "local",
+		"credentials": map[string]any{
+			"user":     username,
+			"password": passwordHash,
+		},
+	}
+	return client.sendRequestDiscardingData("local auth", query, variables)
 }
 
 func (client Client) CreateTeam(teamId string) error {
@@ -147,6 +168,62 @@ func (client Client) AddProjectAccess(projectId string, subjectIds ...string) er
 	}
 	return client.sendRequestDiscardingData(
 		fmt.Sprintf("grant subjects %s access to project with id '%s'", subjectIds, projectId),
+		query,
+		variables,
+	)
+}
+
+func (client Client) ImportLicense(licenseText string) ([]byte, error) {
+	query, err := client.readOperationText("import_license")
+	if err != nil {
+		return []byte{}, err
+	}
+	variables := map[string]any{
+		"licenseText": licenseText,
+	}
+	return client.sendRequest(
+		"importing a license",
+		query,
+		variables,
+	)
+}
+
+func (client Client) InitialConfiguration(username, password, serverName string) ([]byte, error) {
+	query, err := client.readOperationText("initial_configuration")
+	if err != nil {
+		return []byte{}, err
+	}
+	variables := map[string]any{
+		"configuration": map[string]any{
+			"adminName":                    username,
+			"adminPassword":                password,
+			"serverName":                   serverName,
+			"sessionExpireTime":            694201337,
+			"adminCredentialsSaveEnabled":  false,
+			"publicCredentialsSaveEnabled": false,
+			"customConnectionsEnabled":     false,
+			"disabledDrivers": [6]string{
+				"sqlite-ee:sqlite_ee",
+				"sqlite-crypt:sqlite_crypt",
+				"h2:h2_embedded",
+				"h2:h2_embedded_v2",
+				"generic:duckdb_jdbc",
+				"h2gis:h2gis_embedded",
+			},
+			"enabledAuthProviders": [4]string{
+				"local",
+				"token",
+				"openid",
+				"okta-openid",
+			},
+			"anonymousAccessEnabled": false,
+			"enabledFeatures":        [0]string{},
+			"resourceManagerEnabled": true,
+			"secretManagerEnabled":   false,
+		},
+	}
+	return client.sendRequest(
+		"doing initial configuration",
 		query,
 		variables,
 	)

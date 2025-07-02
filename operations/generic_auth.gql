@@ -1,0 +1,5 @@
+query genericAuth($provider: ID!, $credentials: Object!) {
+    authLogin(provider: $provider, credentials: $credentials) {
+        authStatus
+    }
+}
